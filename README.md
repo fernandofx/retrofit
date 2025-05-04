@@ -4,10 +4,10 @@ Endpoints:
 /update/dni/newStatus -> actualiza el estado del DNI (solo puede ser ACTIVE o INACTIVE) Esto podria hacerse por el body pero se están pasan por la URL. <br>
 /findAllByStatus/status -> buscar el stattus.
 
-application.properties:
-spring.application.name=retrofit
-token.api=apis-token-14584.u7rV7qnhMOgPK0JiXV41W77oTeHB5URn
-spring.datasource.url=jdbc:postgresql://localhost:5432/persistenciag8
-spring.datasource.username=alumno
-spring.datasource.password=123456
+application.properties:<br>
+spring.application.name=retrofit<br>
+token.api=apis-token-14584.u7rV7qnhMOgPK0JiXV41W77oTeHB5URn<br>
+spring.datasource.url=jdbc:postgresql://localhost:5432/persistenciag8<br>
+spring.datasource.username=alumno<br>
+spring.datasource.password=123456<br>
 spring.jpa.hibernate.ddl-auto=update 
