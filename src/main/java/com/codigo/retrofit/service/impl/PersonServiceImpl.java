@@ -2,6 +2,8 @@ package com.codigo.retrofit.service.impl;
 
 
 import com.codigo.retrofit.aggregates.constants.Constants;
+import com.codigo.retrofit.aggregates.errors.NotFoundError;
+import com.codigo.retrofit.aggregates.response.PersonResponse;
 import com.codigo.retrofit.aggregates.response.ReniecResponse;
 import com.codigo.retrofit.aggregates.response.ResponseBase;
 import com.codigo.retrofit.entity.PersonEntity;
@@ -18,7 +20,7 @@ import retrofit2.Response;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.Locale;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -44,7 +46,7 @@ public class PersonServiceImpl implements PersonService {
         if(executeReniec.isSuccessful() && Objects.nonNull(executeReniec.body())){
             return executeReniec.body();
         }
-        return new ReniecResponse();
+        throw new NotFoundError("The document don't exists in Reniec");
     }
 
     @Override
@@ -56,26 +58,40 @@ public class PersonServiceImpl implements PersonService {
         if(executeReniec.isSuccessful() && Objects.nonNull(executeReniec.body())){
             PersonEntity personEntity = buildPersonEntity(executeReniec.body());
             PersonEntity personSave = personRepository.save(personEntity);
-            return buildResponse(2001,"Todo OK!!",Optional.of(personSave));
+            return buildResponse(2001,"OK register!!",Optional.of(personSave));
         }
-        return buildResponse(4000,
-                "Ocurrio un Error no existe respuesta de Reniec!!",
-                Optional.empty());
+        throw new NotFoundError("The document don't exists in Reniec");
     }
 
     @Override
-    public ResponseBase<PersonEntity> updatePerson(String dni, String newState) throws RuntimeException {
-        boolean resultNewState = validateNewState(newState);
+    public ResponseBase<PersonEntity> updatePersonStatus(String dni, String newStatus) throws NotFoundError {
+        boolean resultNewState = validateNewState(newStatus);
         if(resultNewState){
-            PersonEntity personEntity = personRepository.findByNumberDocument(dni).orElseThrow(() -> new RuntimeException("The person in not find"));
-            PersonEntity updatePersonEntity = buildPersonEntity(personEntity, newState.toUpperCase());
+            PersonEntity personEntity = personRepository.findByNumberDocument(dni).orElseThrow(() -> new NotFoundError("the person does not exist"));
+            PersonEntity updatePersonEntity = buildPersonEntity(personEntity, newStatus.toUpperCase());
             PersonEntity personSave = personRepository.save(updatePersonEntity);
             return buildResponse(2001, "OK", Optional.of(personSave));
-
-        }else{
-            throw new RuntimeException("Invalid new state");
         }
+        throw new NotFoundError("Invalid new state");
 
+    }
+
+    @Override
+    public ResponseBase<List<PersonResponse>> findAllByState(String status) throws NotFoundError {
+       List<PersonEntity> personEntities = personRepository.findAllByStatus(status);
+       List<PersonResponse> personResponse = personEntities.stream().map(this::buildPersonEntity).toList();
+       if(!personResponse.isEmpty())
+           return buildResponse(2001, "OK", Optional.of(personResponse));
+       throw new NotFoundError("there is not persons with status " + status);
+
+    }
+
+    @Override
+    public ResponseBase<PersonResponse> deleteByDni(String dni) throws NotFoundError {
+        PersonEntity personEntity = personRepository.findByNumberDocument(dni).orElseThrow(()-> new NotFoundError("this dni doesn't exists in the data base"));
+        PersonResponse personResponse = buildPersonEntity(personEntity);
+        personRepository.deleteById(personResponse.getId());
+        return buildResponse(2001, "OK", Optional.of(personResponse));
     }
 
 
@@ -95,8 +111,7 @@ public class PersonServiceImpl implements PersonService {
 
     }
 
-    private <T> ResponseBase<T> buildResponse(
-            int code, String message, Optional<T> optional){
+    private <T> ResponseBase<T> buildResponse(int code, String message, Optional<T> optional){
         ResponseBase<T> responseBase = new ResponseBase<>();
         responseBase.setCode(code);
         responseBase.setMessage(message);
@@ -116,6 +131,18 @@ public class PersonServiceImpl implements PersonService {
                 .status(Constants.STATUS_ACTIVE)
                 .userCreated(Constants.USER_ADMIN)
                 .dateCreated(new Timestamp(System.currentTimeMillis()))
+                .build();
+    }
+
+    private PersonResponse buildPersonEntity(PersonEntity person){
+        return PersonResponse.builder()
+                .id(person.getId())
+                .apellidoPaterno(person.getLastName())
+                .apellidoMaterno(person.getMotherLastName())
+                .nombreCompleto(person.getFullName())
+                .numeroDocumento(person.getNumberDocument())
+                .tipoDocumento(person.getTypeDocument())
+                .digitoVerificador(person.getCheckDigit())
                 .build();
     }
     private PersonEntity buildPersonEntity(PersonEntity person, String newStatus){

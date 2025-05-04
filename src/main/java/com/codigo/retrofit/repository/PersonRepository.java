@@ -10,4 +10,5 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
     Optional<PersonEntity> findByStatus(String status);
     List<PersonEntity> findAllByStatus(String status);
     Optional<PersonEntity> findByNumberDocument(String dni);
+
 }
